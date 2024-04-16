@@ -142,37 +142,41 @@ class PyNime:
 
         return result
 
-    def grab_stream(self, anime_title: str, episode: int, resolution=1080) -> str:
-        ''' It just a shortcut for retrieve the streaming url.
-            As default, it will get the best resolution whics is 1080p.
+       def grab_stream(self, anime_title: str, episodes: list, resolution=1080) -> dict:
+        ''' It just a shortcut for retrieving the streaming URLs.
+            As default, it will get the best resolution which is 1080p.
+            It accepts a list of episodes to grab streaming URLs for multiple episodes.
+            Returns a dictionary containing episode numbers as keys and their respective streaming URLs as values.
         '''
         resolution = str(resolution)
         playlist = PlaylistParser()
+        streaming_urls = {}
 
         search_anime = self.search_anime(anime_title)
 
         if search_anime:
             eps = self.get_episode_urls(search_anime[0].category_url)
 
-            # error handling if selected episode not available
-            if (episode > len(eps) or episode == 0):
-                print(f"[!] Unfortunately episode {episode} not released yet.")
-                print(f"[!] Latest episode is episode {len(eps)}.")
-                return None
+            for episode in episodes:
+                # Error handling if selected episode not available
+                if episode > len(eps) or episode <= 0:
+                    print(f"[!] Unfortunately episode {episode} is not available.")
+                    print(f"[!] Latest episode available is episode {len(eps)}.")
+                    continue
 
+                episode_url = eps[episode - 1]
+                stream_url = self.get_stream_urls(episode_url)
+                result = playlist.parser(stream_url)
+
+                if resolution in result:
+                    streaming_urls[episode] = result[resolution]
+                else:
+                    print(f"[!] Available resolutions for episode {episode} are {list(result.keys())}. {resolution} not available.")
         else:
-            return None
+            print("[!] Anime not found.")
 
-        url_extractor = streamExtractor()
-        stream_url = url_extractor.extract(eps[episode - 1])
+        return streaming_urls
 
-        result = playlist.parser(stream_url)
-
-        if resolution in result:
-            return result[resolution]
-        else:
-            print(f"[!] Available resolution are {list(result.keys())}. {resolution} not available.")
-            return None
 
     def download_video(self, stream_url: str, filename: str):
         ''' This download function is using internal download function I made.
